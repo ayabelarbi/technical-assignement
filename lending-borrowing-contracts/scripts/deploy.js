@@ -1,28 +1,12 @@
-const HDWalletProvider = require('@truffle/hdwallet-provider');
-const Web3 = require('web3');
-const { abi, evm } = require('./compile'); // Assuming you have a compile.js that compiles the contract
+import { buildModule } from "@nomicfoundation/hardhat-ignition/modules";
 
-require('dotenv').config();
-const { MNEMONIC, PROJECT_ID } = process.env;
+const NFTLendingModule = buildModule("NFTLendingModule", (m) => {
+  const initialOwner = m.getParameter("initialOwner", "0x8309f68a92a3154457594dc8Ce214f2FC69e946c"); // Replace with the initial owner address
+  const nftContractAddress = m.getParameter("nftContractAddress", "0x20DE433C3C7E8efEb607aCc3892584972D0cC0c3"); // Replace with your NFT contract address
 
-const provider = new HDWalletProvider(
-    MNEMONIC,
-  `https://mainnet.infura.io/v3/${PROJECT_ID}` 
-);
+  const nftLending = m.contract("NFTLending", [initialOwner, nftContractAddress]);
 
-const web3 = new Web3(provider);
+  return { nftLending };
+});
 
-const deploy = async () => {
-  const accounts = await web3.eth.getAccounts();
-
-  console.log('Attempting to deploy from account', accounts[0]);
-
-  const result = await new web3.eth.Contract(abi)
-    .deploy({ data: evm.bytecode.object })
-    .send({ from: accounts[0], gas: '2000000' });
-
-  console.log('Contract deployed to', result.options.address);
-  provider.engine.stop();
-};
-
-deploy();
+module.exports = NFTLendingModule;

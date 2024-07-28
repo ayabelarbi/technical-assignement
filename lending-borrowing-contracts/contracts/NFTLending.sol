@@ -2,71 +2,85 @@
 pragma solidity ^0.8.0;
 
 import "@openzeppelin/contracts/token/ERC721/IERC721.sol";
+import "@openzeppelin/contracts/token/ERC721/utils/ERC721Holder.sol";
+import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
+import "@openzeppelin/contracts/access/Ownable.sol";
 
-contract NFTLending {
+contract NFTLending is ERC721Holder, ReentrancyGuard, Ownable {
     struct Loan {
         address borrower;
-        address lender;
-        uint256 amount;
-        uint256 interest;
+        uint256 tokenId;
+        uint256 loanAmount;
+        uint256 interestRate;
         uint256 duration;
         uint256 startTime;
         bool repaid;
     }
 
-    mapping(uint256 => Loan) public loans;
     IERC721 public nftContract;
+    mapping(uint256 => Loan) public loans;
+    mapping(address => uint256[]) public borrowerLoans;
 
-    constructor(address _nftContract) {
+    event LoanCreated(uint256 indexed tokenId, address indexed borrower, uint256 loanAmount, uint256 interestRate, uint256 duration);
+    event LoanRepaid(uint256 indexed tokenId, address indexed borrower, uint256 amount);
+
+    constructor(address initialOwner, address _nftContract) Ownable(initialOwner){
         nftContract = IERC721(_nftContract);
     }
 
-    function createLoan(uint256 _tokenId, uint256 _amount, uint256 _interest, uint256 _duration) external {
-        require(nftContract.ownerOf(_tokenId) == msg.sender, "You do not own this NFT");
-        nftContract.transferFrom(msg.sender, address(this), _tokenId);
+    function createLoan(uint256 tokenId, uint256 loanAmount, uint256 interestRate, uint256 duration) external nonReentrant {
+        require(nftContract.ownerOf(tokenId) == msg.sender, "You do not own this NFT");
+        require(nftContract.isApprovedForAll(msg.sender, address(this)) || nftContract.getApproved(tokenId) == address(this), "Contract not approved to transfer NFT");
 
-        loans[_tokenId] = Loan({
+        nftContract.safeTransferFrom(msg.sender, address(this), tokenId);
+
+        loans[tokenId] = Loan({
             borrower: msg.sender,
-            lender: address(0),
-            amount: _amount,
-            interest: _interest,
-            duration: _duration,
-            startTime: 0,
+            tokenId: tokenId,
+            loanAmount: loanAmount,
+            interestRate: interestRate,
+            duration: duration,
+            startTime: block.timestamp,
             repaid: false
         });
+
+        borrowerLoans[msg.sender].push(tokenId);
+
+        // Send the loan amount to the borrower
+        payable(msg.sender).transfer(loanAmount);
+
+        emit LoanCreated(tokenId, msg.sender, loanAmount, interestRate, duration);
     }
 
-    function fundLoan(uint256 _tokenId) external payable {
-        Loan storage loan = loans[_tokenId];
-        require(loan.lender == address(0), "Loan already funded");
-        require(msg.value == loan.amount, "Incorrect loan amount");
-
-        loan.lender = msg.sender;
-        loan.startTime = block.timestamp;
-
-        payable(loan.borrower).transfer(loan.amount);
-    }
-
-    function repayLoan(uint256 _tokenId) external payable {
-        Loan storage loan = loans[_tokenId];
-        require(msg.sender == loan.borrower, "You are not the borrower");
+    function repayLoan(uint256 tokenId) external payable nonReentrant {
+        Loan storage loan = loans[tokenId];
+        require(loan.borrower == msg.sender, "You are not the borrower");
         require(!loan.repaid, "Loan already repaid");
-        require(block.timestamp <= loan.startTime + loan.duration, "Loan duration exceeded");
+        require(block.timestamp <= loan.startTime + loan.duration, "Loan duration expired");
 
-        uint256 repaymentAmount = loan.amount + loan.interest;
-        require(msg.value == repaymentAmount, "Incorrect repayment amount");
+        uint256 interest = (loan.loanAmount * loan.duration * loan.interestRate) / (100 * 365 * 24 * 60 * 60);
+        uint256 totalRepayment = loan.loanAmount + interest;
+
+        require(msg.value == totalRepayment, "Incorrect repayment amount");
 
         loan.repaid = true;
-        nftContract.transferFrom(address(this), loan.borrower, _tokenId);
-        payable(loan.lender).transfer(repaymentAmount);
+
+        nftContract.safeTransferFrom(address(this), loan.borrower, tokenId);
+
+        emit LoanRepaid(tokenId, msg.sender, msg.value);
     }
 
-    function claimNFT(uint256 _tokenId) external {
-        Loan storage loan = loans[_tokenId];
-        require(msg.sender == loan.lender, "You are not the lender");
+    function liquidateLoan(uint256 tokenId) external onlyOwner nonReentrant {
+        Loan storage loan = loans[tokenId];
         require(!loan.repaid, "Loan already repaid");
-        require(block.timestamp > loan.startTime + loan.duration, "Loan duration not yet exceeded");
+        require(block.timestamp > loan.startTime + loan.duration, "Loan duration not expired");
 
-        nftContract.transferFrom(address(this), loan.lender, _tokenId);
+        nftContract.safeTransferFrom(address(this), owner(), tokenId);
     }
+
+    // Function to receive Ether. msg.data must be empty
+    receive() external payable {}
+
+    // Fallback function is called when msg.data is not empty
+    fallback() external payable {}
 }
