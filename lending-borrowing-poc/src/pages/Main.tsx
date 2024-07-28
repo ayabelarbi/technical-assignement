@@ -44,17 +44,7 @@ const Main = () => {
     }
   };
 
-  const fetchNFTPrice = async (tokenId: number) => {
-    try {
-      const tokenPrice = await nftContract.methods.tokenPrice(tokenId).call();
-      return { tokenId, tokenPrice };
-    } catch (err) {
-      setError(
-        `Error fetching NFT details for token ID ${tokenId}: ${err.message}`
-      );
-      return null;
-    }
-  }
+    
   const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
   const fetchNFT = async () => {
