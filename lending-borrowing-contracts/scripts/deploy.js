@@ -1,4 +1,4 @@
-import { buildModule } from "@nomicfoundation/hardhat-ignition/modules";
+const { buildModule } = require("@nomicfoundation/hardhat-ignition/modules");
 
 const NFTLendingModule = buildModule("NFTLendingModule", (m) => {
   const initialOwner = m.getParameter("initialOwner", "0x8309f68a92a3154457594dc8Ce214f2FC69e946c"); // Replace with the initial owner address
