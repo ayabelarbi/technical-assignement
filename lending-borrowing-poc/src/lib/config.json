@@ -1,0 +1,16 @@
+{
+    "0xaa36a7": {
+      "name": "Sepolia",
+      "contractAddress": "",
+      "symbol": "ETH",
+      "blockExplorer": "https://eth-sepolia.blockscout.com/",
+      "rpcUrl": "https://ethereum-sepolia-rpc.publicnode.com"
+    },
+    "0xe704": {
+      "name": "Linea",
+      "contractAddress": "",
+      "symbol": "LineaETH",
+      "blockExplorer": "https://explorer.goerli.linea.build",
+      "rpcUrl": "https://rpc.goerli.linea.build"
+    }
+  }

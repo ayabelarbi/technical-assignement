@@ -1,0 +1,16 @@
+{
+  "dependencies": {
+    "@openzeppelin/contracts": "^5.0.2",
+    "@truffle/hdwallet-provider": "^2.1.15",
+    "dotenv": "^16.4.5"
+  },
+  "scripts": {
+    "build": "truffle compile && node migrations/scripts/scriptNftLending.js",
+    "compile": "truffle compile",
+    "migrate": "truffle migrate",
+    "test": "truffle test",
+    "dev": "npm run migrate --development",
+    "deploy:sepolia": "truffle migrate --network sepolia",
+    "deploy:linea": "truffle migrate --network linea"
+  }
+}
