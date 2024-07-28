@@ -12,5 +12,8 @@
     "dev": "npm run migrate --development",
     "deploy:sepolia": "truffle migrate --network sepolia",
     "deploy:linea": "truffle migrate --network linea"
+  },
+  "devDependencies": {
+    "hardhat": "^2.22.6"
   }
 }
